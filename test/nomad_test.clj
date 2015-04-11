@@ -127,6 +127,22 @@
                                                     (constantly (pr-str {})))}}))]
     (test/is (= "dummy-instance" (get-in returned-config [:location :nomad/instance])))))
 
+(deftest loads-default-env-vars
+  (let [{:keys [etag config]}
+        (#'nomad/update-config-file {}
+                                    (DummyConfigFile.
+                                     (constantly :etag)
+                                     (constantly "{:test #nomad/env-var [\"NOPE\" :default]}")))]
+    (test/is (= :default (:test config)))))
+
+(deftest loads-default-edn-env-vars
+  (let [{:keys [etag config]}
+        (#'nomad/update-config-file {}
+                                    (DummyConfigFile.
+                                     (constantly :etag)
+                                     (constantly "{:test #nomad/edn-env-var [\"NOPE\" :default]}")))]
+    (test/is (= :default (:test config)))))
+
 (defrecord DummyPrivateFile [etag* content*]
   nomad/ConfigFile
   (etag [_] etag*)
@@ -262,8 +278,12 @@
 
   (test/is (= (System/getProperty "user.name")
               (:username (read-config "{:username #nomad/jvm-prop \"user.name\"}"))))
+  (test/is (= (System/getProperty "user.name")
+              (:username (read-config "{:username #nomad/jvm-prop [\"user.name\" \"this-is-the-default\"]}"))))
   (test/is (= {:a 1 :b 2}
-              (:username (read-config "{:username #nomad/edn-jvm-prop \"nomad-test-property\"}")))))
+              (:username (read-config "{:username #nomad/edn-jvm-prop \"nomad-test-property\"}"))))
+  (test/is (= "this-is-the-default"
+              (:username (read-config "{:username #nomad/edn-jvm-prop [\"unknown-property\" \"this-is-the-default\"]}")))))
 
 (comment
   ;; This bit is for some manual integration testing
